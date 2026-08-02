@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import errno
 import os
+import pty
 import re
 import tempfile
 from dataclasses import dataclass, field
@@ -28,6 +30,7 @@ class LoginFlow:
     output: list[str] = field(default_factory=list)
     url: str = ""
     user_code: str = ""
+    master_fd: int | None = None
     reader: asyncio.Task[None] | None = None
 
 
@@ -42,13 +45,27 @@ class SubscriptionRuntimes:
         state = self.store.new_handle()
         home = self.store.home_dir(provider, handle)
         command, env = self._login_command(provider, home)
-        process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            env=env,
+        master_fd, slave_fd = pty.openpty()
+        try:
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *command,
+                    stdin=slave_fd,
+                    stdout=slave_fd,
+                    stderr=slave_fd,
+                    env=env,
+                )
+            except Exception:
+                os.close(master_fd)
+                raise
+        finally:
+            os.close(slave_fd)
+        flow = LoginFlow(
+            provider=provider,
+            handle=handle,
+            process=process,
+            master_fd=master_fd,
         )
-        flow = LoginFlow(provider=provider, handle=handle, process=process)
         flow.reader = asyncio.create_task(self._read_login_output(flow))
         self.logins[state] = flow
 
@@ -142,22 +159,49 @@ class SubscriptionRuntimes:
         raise ValueError("unsupported provider")
 
     async def _read_login_output(self, flow: LoginFlow) -> None:
-        if flow.process.stdout is None:
+        if flow.master_fd is None:
             return
-        while True:
-            line = await flow.process.stdout.readline()
-            if not line:
-                break
-            text = line.decode("utf-8", errors="replace").strip()
-            if text:
-                flow.output.append(text)
-                match = URL_PATTERN.search(text)
-                if match and not flow.url:
-                    flow.url = match.group(0).rstrip(".,;)")
-                code_match = USER_CODE_PATTERN.search(text)
-                if code_match and not flow.user_code:
-                    flow.user_code = code_match.group(0)
-        await flow.process.wait()
+        pending = ""
+        try:
+            while True:
+                try:
+                    chunk = await asyncio.to_thread(os.read, flow.master_fd, 4096)
+                except OSError as error:
+                    if error.errno == errno.EIO:
+                        break
+                    raise
+                if not chunk:
+                    break
+                pending += chunk.decode("utf-8", errors="replace")
+                lines = pending.splitlines(keepends=True)
+                pending = ""
+                if lines and not lines[-1].endswith(("\n", "\r")):
+                    pending = lines.pop()
+                for line in lines:
+                    self._record_login_output(flow, line)
+                self._record_login_markers(flow, pending)
+            if pending:
+                self._record_login_output(flow, pending)
+        finally:
+            os.close(flow.master_fd)
+            flow.master_fd = None
+            await flow.process.wait()
+
+    @staticmethod
+    def _record_login_output(flow: LoginFlow, value: str) -> None:
+        text = value.strip()
+        if text:
+            flow.output.append(text)
+            SubscriptionRuntimes._record_login_markers(flow, text)
+
+    @staticmethod
+    def _record_login_markers(flow: LoginFlow, text: str) -> None:
+        match = URL_PATTERN.search(text)
+        if match and not flow.url:
+            flow.url = match.group(0).rstrip(".,;)")
+        code_match = USER_CODE_PATTERN.search(text)
+        if code_match and not flow.user_code:
+            flow.user_code = code_match.group(0)
 
     async def _stop_flow(self, flow: LoginFlow) -> None:
         if flow.process.returncode is None:
