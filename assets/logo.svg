@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="CPA Subscription Bridge">
+  <defs>
+    <linearGradient id="g" x1="16" y1="16" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6ee7f9"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#0b1020"/>
+  <path d="M31 41h36a18 18 0 0 1 18 18v4" fill="none" stroke="url(#g)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M97 87H61a18 18 0 0 1-18-18v-4" fill="none" stroke="url(#g)" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="30" cy="41" r="10" fill="#6ee7f9"/>
+  <circle cx="98" cy="87" r="10" fill="#8b5cf6"/>
+</svg>
