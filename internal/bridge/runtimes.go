@@ -21,14 +21,15 @@ type Runtimes struct {
 	store         *CredentialStore
 	copilotBinary string
 	cursorBinary  string
+	cursorScript  string
 
 	mu     sync.Mutex
 	logins map[string]*loginFlow
 }
 
-func NewRuntimes(store *CredentialStore, copilotBinary, cursorBinary string) *Runtimes {
+func NewRuntimes(store *CredentialStore, copilotBinary, cursorBinary, cursorScript string) *Runtimes {
 	return &Runtimes{
-		store: store, copilotBinary: copilotBinary, cursorBinary: cursorBinary,
+		store: store, copilotBinary: copilotBinary, cursorBinary: cursorBinary, cursorScript: cursorScript,
 		logins: make(map[string]*loginFlow),
 	}
 }
@@ -214,7 +215,7 @@ func (r *Runtimes) loginCommand(provider, home string) (*exec.Cmd, error) {
 	case "copilot":
 		command = exec.Command(r.copilotBinary, "login")
 	case "cursor":
-		command = exec.Command(r.cursorBinary, "login")
+		command = exec.Command(r.cursorBinary, r.cursorArguments("login")...)
 	default:
 		return nil, errors.New("unsupported provider")
 	}
@@ -329,7 +330,7 @@ func (r *Runtimes) runCursor(ctx context.Context, handle string, args []string, 
 	}
 	callContext, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	command := exec.CommandContext(callContext, r.cursorBinary, args...)
+	command := exec.CommandContext(callContext, r.cursorBinary, r.cursorArguments(args...)...)
 	command.Env = accountEnvironment("cursor", home)
 	var output bytes.Buffer
 	command.Stdout = &output
@@ -338,6 +339,13 @@ func (r *Runtimes) runCursor(ctx context.Context, handle string, args []string, 
 		return "", fmt.Errorf("Cursor CLI exited: %s: %w", tail(output.String(), 4000), err)
 	}
 	return output.String(), nil
+}
+
+func (r *Runtimes) cursorArguments(args ...string) []string {
+	if r.cursorScript == "" {
+		return args
+	}
+	return append([]string{"--use-system-ca", r.cursorScript}, args...)
 }
 
 func (r *Runtimes) removeLogin(state string) {
@@ -369,6 +377,9 @@ func accountEnvironment(provider, home string) []string {
 	environment = setEnvironment(environment, "GH_BROWSER", "echo")
 	if provider == "copilot" {
 		environment = setEnvironment(environment, "COPILOT_HOME", filepath.Join(home, ".copilot"))
+	} else {
+		environment = setEnvironment(environment, "CURSOR_INVOKED_AS", "cursor-agent")
+		environment = setEnvironment(environment, "NODE_COMPILE_CACHE", filepath.Join(home, ".cache", "cursor-compile-cache"))
 	}
 	return environment
 }

@@ -14,6 +14,7 @@ type Options struct {
 	DataDir       string
 	CopilotBinary string
 	CursorBinary  string
+	CursorScript  string
 	Secret        string
 }
 
@@ -33,12 +34,18 @@ func NewServer(options Options) (*Server, error) {
 	if _, err := os.Stat(options.CursorBinary); err != nil {
 		return nil, fmt.Errorf("Cursor Agent is unavailable: %w", err)
 	}
+	if options.CursorScript != "" {
+		if _, err := os.Stat(options.CursorScript); err != nil {
+			return nil, fmt.Errorf("Cursor Agent script is unavailable: %w", err)
+		}
+	}
 	return &Server{
 		secret: strings.TrimSpace(options.Secret),
 		runtimes: NewRuntimes(
 			store,
 			options.CopilotBinary,
 			options.CursorBinary,
+			options.CursorScript,
 		),
 	}, nil
 }

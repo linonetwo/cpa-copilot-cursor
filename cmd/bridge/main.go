@@ -20,7 +20,8 @@ func main() {
 	server, err := bridge.NewServer(bridge.Options{
 		DataDir:       envOrDefault("CPA_SUBSCRIPTION_BRIDGE_DATA", "/data"),
 		CopilotBinary: envOrDefault("COPILOT_CLI_PATH", "/opt/copilot/copilot"),
-		CursorBinary:  envOrDefault("CURSOR_AGENT_PATH", "/opt/cursor-agent/cursor-agent"),
+		CursorBinary:  envOrDefault("CURSOR_AGENT_PATH", "/opt/cursor-agent/node"),
+		CursorScript:  envOrDefault("CURSOR_AGENT_SCRIPT", "/opt/cursor-agent/index.js"),
 		Secret:        os.Getenv("CPA_SUBSCRIPTION_BRIDGE_SECRET"),
 	})
 	if err != nil {

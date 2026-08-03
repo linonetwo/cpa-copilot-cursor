@@ -45,32 +45,34 @@ RUN mkdir -p /opt/cursor-agent \
     && echo "$CURSOR_SHA256  /tmp/cursor-agent.tar.gz" | sha256sum --check - \
     && tar -xzf /tmp/cursor-agent.tar.gz --strip-components=1 -C /opt/cursor-agent \
     && chmod +x /opt/cursor-agent/cursor-agent \
+    && rm -rf \
+      /opt/cursor-agent/node_modules/better-sqlite3/build/Release/obj \
+      /opt/cursor-agent/node_modules/better-sqlite3/build/Release/obj.target \
+      /opt/cursor-agent/node_modules/better-sqlite3/build/Release/sqlite3.a \
+      /opt/cursor-agent/node_modules/better-sqlite3/deps \
     && rm /tmp/cursor-agent.tar.gz
 
-FROM debian:bookworm-slim
+FROM cgr.dev/chainguard/glibc-dynamic:latest@sha256:57e5704e70a85b90191182eb6110d1c817df0d8e96035cb041195c5a351f0861
 
 LABEL org.opencontainers.image.source="https://github.com/linonetwo/cpa-subscription-bridge" \
       org.opencontainers.image.description="Native CPA OAuth providers for GitHub Copilot and Cursor subscriptions" \
       org.opencontainers.image.licenses="MIT"
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates tini \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY --from=runtime-downloader /opt/copilot/ /opt/copilot/
 COPY --from=runtime-downloader /opt/cursor-agent/ /opt/cursor-agent/
-COPY --from=plugin-builder /out/ /plugins/
-RUN install -m 0755 /plugins/cpa-subscription-bridge /usr/local/bin/cpa-subscription-bridge \
-    && rm /plugins/cpa-subscription-bridge
+COPY --from=plugin-builder /out/cpa-copilot-provider.so /plugins/cpa-copilot-provider.so
+COPY --from=plugin-builder /out/cpa-cursor-provider.so /plugins/cpa-cursor-provider.so
+COPY --from=plugin-builder /out/cpa-subscription-bridge /usr/local/bin/cpa-subscription-bridge
 
 ENV CPA_SUBSCRIPTION_BRIDGE_DATA=/data \
     COPILOT_CLI_PATH=/opt/copilot/copilot \
-    CURSOR_AGENT_PATH=/opt/cursor-agent/cursor-agent \
+    CURSOR_AGENT_PATH=/opt/cursor-agent/node \
+    CURSOR_AGENT_SCRIPT=/opt/cursor-agent/index.js \
     HOME=/data/runtime-home
 
+USER 0
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD ["/usr/local/bin/cpa-subscription-bridge", "--healthcheck"]
 
-ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["/usr/local/bin/cpa-subscription-bridge"]
+ENTRYPOINT ["/usr/local/bin/cpa-subscription-bridge"]

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -50,6 +51,15 @@ func TestDeviceFlowURLAndMetadata(t *testing.T) {
 	metadata := loginMetadata("https://github.com/login/device", "ABCD-EFGH", "Enter the code")
 	if metadata["user_code"] != "ABCD-EFGH" {
 		t.Fatalf("metadata = %#v", metadata)
+	}
+}
+
+func TestCursorNodeArguments(t *testing.T) {
+	runtimes := NewRuntimes(nil, "", "/opt/cursor-agent/node", "/opt/cursor-agent/index.js")
+	got := runtimes.cursorArguments("login")
+	want := []string{"--use-system-ca", "/opt/cursor-agent/index.js", "login"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("Cursor arguments = %#v, want %#v", got, want)
 	}
 }
 

@@ -14,6 +14,7 @@ CPA resource routes are not management-key authenticated by CPA itself. The quot
 
 - GitHub Copilot requests use the official Go SDK and a pinned, checksum-verified official Copilot CLI package.
 - Cursor requests use the official Cursor Agent CLI archive with a pinned SHA-256.
+- The final runtime uses a shell-free Chainguard `glibc-dynamic` image pinned by OCI digest.
 - The project does not implement account farming, hardware identity reset, anti-ban logic, or subscription-limit bypasses.
 
 ## Reporting

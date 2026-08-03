@@ -51,8 +51,17 @@ official CLI runtimes will remain the dominant image components.
 
 The local candidate measurement after migration is:
 
-- total image: 519 MB (64 MB smaller);
+- total image: 406 MB (177 MB smaller);
 - idle bridge memory: about 5 MiB (previous Python bridge: about 54 MiB).
+
+The remaining image size is dominated by required upstream runtimes:
+
+- official Copilot CLI: 169 MB;
+- official Cursor Agent runtime: 203 MB after removing build-only SQLite
+  intermediate files;
+- both CPA shared libraries: 14 MB;
+- Go bridge: 9 MB;
+- pinned Chainguard glibc-dynamic base: about 4 MB.
 
 ## Compatibility Contract
 

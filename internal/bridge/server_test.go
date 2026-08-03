@@ -100,6 +100,7 @@ func newTestServer(t *testing.T, secret string) *Server {
 		DataDir:       t.TempDir(),
 		CopilotBinary: binary,
 		CursorBinary:  binary,
+		CursorScript:  "",
 		Secret:        secret,
 	})
 	if err != nil {
