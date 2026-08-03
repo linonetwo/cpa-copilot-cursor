@@ -37,13 +37,9 @@ func Handle(kind Kind, method string, request []byte) ([]byte, error) {
 	case pluginabi.MethodExecutorCountTokens:
 		return okEnvelope(pluginapi.ExecutorResponse{Payload: []byte(`{"total_tokens":0}`)})
 	case pluginabi.MethodManagementRegister:
-		return okEnvelope(managementRegistration{Resources: []managementResource{{
-			Path:        "/quota",
-			Menu:        providerName(kind) + " Quota",
-			Description: "Shows subscription quota and account health without exposing OAuth credentials.",
-		}}})
+		return okEnvelope(managementRegistration{Resources: managementResources(kind)})
 	case pluginabi.MethodManagementHandle:
-		return handleManagement(kind)
+		return handleManagement(kind, request)
 	default:
 		return errorEnvelope("unknown_method", "unknown method: "+method), nil
 	}
@@ -54,7 +50,7 @@ func registrationFor(kind Kind) registration {
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
 			Name:             providerName(kind),
-			Version:          "0.2.0-rc.6",
+			Version:          "0.2.0-rc.7",
 			Author:           "linonetwo",
 			GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
 			Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-copilot-cursor/main/assets/logo.svg",
@@ -94,9 +90,13 @@ func startLogin(kind Kind) ([]byte, error) {
 	if err != nil {
 		expiresAt = time.Now().Add(10 * time.Minute).UTC()
 	}
+	authorizationURL := response.URL
+	if rememberDeviceFlow(kind, response.State, response.Metadata, expiresAt) {
+		authorizationURL = deviceFlowURL(kind, response.State)
+	}
 	return okEnvelope(pluginapi.AuthLoginStartResponse{
 		Provider:  providerID(kind),
-		URL:       response.URL,
+		URL:       authorizationURL,
 		State:     response.State,
 		ExpiresAt: expiresAt,
 		Metadata:  response.Metadata,
@@ -116,8 +116,10 @@ func pollLogin(kind Kind, request []byte) ([]byte, error) {
 	}
 	switch response.Status {
 	case "success":
+		forgetDeviceFlow(kind, pollRequest.State)
 		return okEnvelope(pluginapi.AuthLoginPollResponse{Status: pluginapi.AuthLoginStatusSuccess, Message: response.Message, Auth: authData(kind, response.Auth)})
 	case "error":
+		forgetDeviceFlow(kind, pollRequest.State)
 		return okEnvelope(pluginapi.AuthLoginPollResponse{Status: pluginapi.AuthLoginStatusError, Message: response.Message})
 	default:
 		return okEnvelope(pluginapi.AuthLoginPollResponse{Status: pluginapi.AuthLoginStatusPending, Message: response.Message})

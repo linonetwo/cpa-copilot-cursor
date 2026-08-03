@@ -10,6 +10,8 @@ The bridge binds to `127.0.0.1:8789`. Do not expose it through a Kubernetes Serv
 
 CPA resource routes are not management-key authenticated by CPA itself. The quota resource intentionally returns only provider labels, runtime status, and quota summaries. Protect the whole CPA management UI with network policy and external authentication.
 
+The Copilot device authorization resource is guarded by a random, short-lived OAuth state and only exposes the corresponding one-time device code and GitHub verification URL. Configure `CPA_COPILOT_CURSOR_PUBLIC_BASE_URL` to the protected CPA origin; do not point it at an unrelated public host.
+
 ## Upstream software
 
 - GitHub Copilot requests use the official Go SDK and a pinned, checksum-verified official Copilot CLI package.

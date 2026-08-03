@@ -39,6 +39,13 @@ func providerID(kind Kind) string {
 	return "github-copilot"
 }
 
+func pluginID(kind Kind) string {
+	if kind == KindCursor {
+		return "cpa-cursor-provider"
+	}
+	return "cpa-copilot-provider"
+}
+
 func providerName(kind Kind) string {
 	if kind == KindCursor {
 		return "Cursor Subscription"

@@ -21,7 +21,31 @@ func SetHostCaller(caller HostCaller) {
 	hostCaller = caller
 }
 
-func handleManagement(kind Kind) ([]byte, error) {
+func managementResources(kind Kind) []managementResource {
+	resources := []managementResource{{
+		Path:        "/quota",
+		Menu:        providerName(kind) + " Quota",
+		Description: "Shows subscription quota and account health without exposing OAuth credentials.",
+	}}
+	if kind == KindCopilot {
+		resources = append(resources, managementResource{
+			Path:        "/device",
+			Description: "Displays the GitHub device code for a pending Copilot login.",
+		})
+	}
+	return resources
+}
+
+func handleManagement(kind Kind, request []byte) ([]byte, error) {
+	var managementRequest pluginapi.ManagementRequest
+	if len(request) > 0 {
+		if err := json.Unmarshal(request, &managementRequest); err != nil {
+			return nil, err
+		}
+	}
+	if strings.HasSuffix(strings.TrimRight(managementRequest.Path, "/"), "/device") {
+		return handleDeviceFlow(kind, managementRequest)
+	}
 	accounts, err := loadQuotaAccounts(kind)
 	if err != nil {
 		return okEnvelope(htmlResponse(http.StatusBadGateway, renderQuotaPage(kind, nil, err.Error())))
@@ -81,8 +105,14 @@ func loadQuotaAccounts(kind Kind) ([]quotaAccount, error) {
 func htmlResponse(status int, body []byte) pluginapi.ManagementResponse {
 	return pluginapi.ManagementResponse{
 		StatusCode: status,
-		Headers:    http.Header{"Content-Type": []string{"text/html; charset=utf-8"}, "Cache-Control": []string{"no-store"}},
-		Body:       body,
+		Headers: http.Header{
+			"Content-Type":            []string{"text/html; charset=utf-8"},
+			"Cache-Control":           []string{"no-store"},
+			"Content-Security-Policy": []string{"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"},
+			"Referrer-Policy":         []string{"no-referrer"},
+			"X-Content-Type-Options":  []string{"nosniff"},
+		},
+		Body: body,
 	}
 }
 
