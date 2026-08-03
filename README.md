@@ -19,6 +19,8 @@ Copilot 额度来自官方 SDK 的 `account.getQuota`。Cursor 目前没有公�
 
 GitHub 官方 Device Flow 要求客户端同时展示 `verification_uri` 和 `user_code`。为兼容只向 WebUI 返回 `url/state` 的 CPA 版本，桥接服务会把设备码同时放入 URL 的 `user_code` 查询参数和插件 metadata；支持设备码 UI 的 CPAMP 可将它独立展示并提供复制按钮。设备码默认 15 分钟过期，不会写入日志或认证文件。
 
+Copilot CLI 在无系统 keychain 的无头 Linux 中会询问是否改存 `~/.copilot/config.json`。桥接服务仅在用户主动发起 Copilot 登录后自动确认该提示；凭证保存在账号隔离、权限为 `0700` 的持久卷目录中，不会进入 CPA auth JSON。
+
 ## 架构
 
 ```mermaid

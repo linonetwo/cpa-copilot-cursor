@@ -17,6 +17,7 @@ import (
 var (
 	loginURLPattern = regexp.MustCompile(`https://[^\s<>"']+`)
 	userCodePattern = regexp.MustCompile(`\b[A-Z0-9]{4}-[A-Z0-9]{4}\b`)
+	ansiPattern     = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
 )
 
 type loginFlow struct {
@@ -25,13 +26,14 @@ type loginFlow struct {
 	command  *exec.Cmd
 	terminal *os.File
 
-	mu       sync.Mutex
-	output   []string
-	url      string
-	userCode string
-	waitErr  error
-	finished bool
-	done     chan struct{}
+	mu                       sync.Mutex
+	output                   []string
+	url                      string
+	userCode                 string
+	acceptedPlaintextStorage bool
+	waitErr                  error
+	finished                 bool
+	done                     chan struct{}
 }
 
 func startLoginFlow(provider, handle string, command *exec.Cmd) (*loginFlow, error) {
@@ -116,6 +118,14 @@ func (f *loginFlow) recordMarkersLocked(value string) {
 	}
 	if f.userCode == "" {
 		f.userCode = userCodePattern.FindString(value)
+	}
+	normalized := strings.ToLower(ansiPattern.ReplaceAllString(value, ""))
+	if f.provider == "copilot" &&
+		!f.acceptedPlaintextStorage &&
+		strings.Contains(normalized, "plaintext") &&
+		(strings.Contains(normalized, "(y/n)") || strings.Contains(normalized, "[y/n]")) {
+		f.acceptedPlaintextStorage = true
+		_, _ = f.terminal.Write([]byte("y\n"))
 	}
 }
 

@@ -3,10 +3,12 @@ package bridge
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCredentialStoreRoundTrip(t *testing.T) {
@@ -51,6 +53,36 @@ func TestDeviceFlowURLAndMetadata(t *testing.T) {
 	metadata := loginMetadata("https://github.com/login/device", "ABCD-EFGH", "Enter the code")
 	if metadata["user_code"] != "ABCD-EFGH" {
 		t.Fatalf("metadata = %#v", metadata)
+	}
+}
+
+func TestLoginFlowAcceptsPlaintextCredentialStorage(t *testing.T) {
+	binary := filepath.Join(t.TempDir(), "fake-copilot")
+	script := "#!/bin/sh\n" +
+		"printf 'Open https://github.com/login/device and enter ABCD-EFGH\\n'\n" +
+		"printf 'System keychain unavailable. Store token in plaintext config file? (y/N) '\n" +
+		"read answer\n" +
+		"[ \"$answer\" = y ] || exit 1\n" +
+		"printf 'Signed in successfully\\n'\n"
+	if err := os.WriteFile(binary, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	flow, err := startLoginFlow("copilot", "test-handle", exec.Command(binary))
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-flow.done:
+	case <-time.After(2 * time.Second):
+		flow.stop()
+		t.Fatal("login flow did not answer plaintext credential prompt")
+	}
+	_, _, recent, finished, waitErr := flow.snapshot()
+	if !finished || waitErr != nil {
+		t.Fatalf("login flow finished=%v waitErr=%v output=%q", finished, waitErr, recent)
+	}
+	if !strings.Contains(recent, "Signed in successfully") {
+		t.Fatalf("login output = %q", recent)
 	}
 }
 
