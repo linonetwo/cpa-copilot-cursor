@@ -29,6 +29,6 @@ jobs:
           context: .
           platforms: linux/amd64
           push: false
-          tags: cpa-subscription-bridge:ci
+          tags: cpa-copilot-cursor:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max

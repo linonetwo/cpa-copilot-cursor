@@ -73,7 +73,7 @@ func TestServerCopilotDeviceFlowContract(t *testing.T) {
 	if polled.Status != "success" {
 		t.Fatalf("poll status = %q", polled.Status)
 	}
-	if polled.Auth.Type != "subscription-bridge" || polled.Auth.Upstream != "copilot" {
+	if polled.Auth.Type != "copilot-cursor" || polled.Auth.Upstream != "copilot" {
 		t.Fatalf("auth record = %+v", polled.Auth)
 	}
 }

@@ -17,7 +17,7 @@ RUN mkdir -p /out \
       -o /out/cpa-cursor-provider.so ./cmd/provider \
     && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build \
       -trimpath -ldflags="-s -w" \
-      -o /out/cpa-subscription-bridge ./cmd/bridge \
+      -o /out/cpa-copilot-cursor ./cmd/bridge \
     && rm -f /out/*.h
 
 FROM debian:bookworm-slim AS runtime-downloader
@@ -54,7 +54,7 @@ RUN mkdir -p /opt/cursor-agent \
 
 FROM cgr.dev/chainguard/glibc-dynamic:latest@sha256:57e5704e70a85b90191182eb6110d1c817df0d8e96035cb041195c5a351f0861
 
-LABEL org.opencontainers.image.source="https://github.com/linonetwo/cpa-subscription-bridge" \
+LABEL org.opencontainers.image.source="https://github.com/linonetwo/cpa-copilot-cursor" \
       org.opencontainers.image.description="Native CPA OAuth providers for GitHub Copilot and Cursor subscriptions" \
       org.opencontainers.image.licenses="MIT"
 
@@ -62,9 +62,9 @@ COPY --from=runtime-downloader /opt/copilot/ /opt/copilot/
 COPY --from=runtime-downloader /opt/cursor-agent/ /opt/cursor-agent/
 COPY --from=plugin-builder /out/cpa-copilot-provider.so /plugins/cpa-copilot-provider.so
 COPY --from=plugin-builder /out/cpa-cursor-provider.so /plugins/cpa-cursor-provider.so
-COPY --from=plugin-builder /out/cpa-subscription-bridge /usr/local/bin/cpa-subscription-bridge
+COPY --from=plugin-builder /out/cpa-copilot-cursor /usr/local/bin/cpa-copilot-cursor
 
-ENV CPA_SUBSCRIPTION_BRIDGE_DATA=/data \
+ENV CPA_COPILOT_CURSOR_DATA=/data \
     COPILOT_CLI_PATH=/opt/copilot/copilot \
     CURSOR_AGENT_PATH=/opt/cursor-agent/node \
     CURSOR_AGENT_SCRIPT=/opt/cursor-agent/index.js \
@@ -73,6 +73,6 @@ ENV CPA_SUBSCRIPTION_BRIDGE_DATA=/data \
 USER 0
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD ["/usr/local/bin/cpa-subscription-bridge", "--healthcheck"]
+    CMD ["/usr/local/bin/cpa-copilot-cursor", "--healthcheck"]
 
-ENTRYPOINT ["/usr/local/bin/cpa-subscription-bridge"]
+ENTRYPOINT ["/usr/local/bin/cpa-copilot-cursor"]

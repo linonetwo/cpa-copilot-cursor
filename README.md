@@ -1,4 +1,4 @@
-# CPA Subscription Bridge
+# CPA Copilot Cursor
 
 为 [CLIProxyAPI (CPA)](https://github.com/router-for-me/CLIProxyAPI) 提供原生的 GitHub Copilot 与 Cursor 订阅接入。
 
@@ -33,14 +33,18 @@ flowchart LR
   BRIDGE --> PVC[(Dedicated credential PVC)]
 ```
 
-桥接服务只监听 Pod 内的 `127.0.0.1`，不需要 Service 或 Ingress。建议同时设置 `CPA_SUBSCRIPTION_BRIDGE_SECRET`，让 CPA 主容器和 bridge sidecar 使用同一个 Kubernetes Secret。
+桥接服务只监听 Pod 内的 `127.0.0.1`，不需要 Service 或 Ingress。建议同时设置 `CPA_COPILOT_CURSOR_SECRET`，让 CPA 主容器和 bridge sidecar 使用同一个 Kubernetes Secret。
+
+## 项目范围
+
+本仓库只支持 GitHub Copilot 与 Cursor，不接受把第三个 AI 提供商直接加入本镜像。新增提供商应使用独立仓库、独立 CPA 插件和独立镜像，避免每增加一套官方 CLI 就让所有用户承担额外镜像体积。可复用的纯 Go 协议或测试代码可以另行提取为共享库。
 
 ## 镜像内容
 
 发布镜像：
 
 ```text
-ghcr.io/linonetwo/cpa-subscription-bridge:<version>
+ghcr.io/linonetwo/cpa-copilot-cursor:<version>
 ```
 
 Harbor Proxy Cache 可按标准 `ghcr.io` 上游缓存该镜像，无需为 CPA 整个项目设置 HTTP 代理。
@@ -50,7 +54,7 @@ Harbor Proxy Cache 可按标准 `ghcr.io` 上游缓存该镜像，无需为 CPA 
 ```text
 /plugins/cpa-copilot-provider.so
 /plugins/cpa-cursor-provider.so
-/usr/local/bin/cpa-subscription-bridge
+/usr/local/bin/cpa-copilot-cursor
 /opt/copilot/copilot
 /opt/cursor-agent/node
 /opt/cursor-agent/index.js
@@ -74,13 +78,13 @@ Pod 中需要：
 - init container 把 `/plugins/*.so` 复制到 CPA 的插件目录。
 - bridge sidecar 运行镜像默认命令。
 - bridge sidecar 挂载独立 `/data` PVC。
-- CPA 主容器与 bridge sidecar 设置相同的 `CPA_SUBSCRIPTION_BRIDGE_SECRET`。
+- CPA 主容器与 bridge sidecar 设置相同的 `CPA_COPILOT_CURSOR_SECRET`。
 
 ## 本地验证
 
 ```bash
 go test ./...
-docker build -t cpa-subscription-bridge:dev .
+docker build -t cpa-copilot-cursor:dev .
 ```
 
 Docker 构建固定校验官方 Copilot CLI 下载包的 SHA-512 和 Cursor Agent 下载包的 SHA-256；Go bridge 固定使用 `github.com/github/copilot-sdk/go v1.0.8`。

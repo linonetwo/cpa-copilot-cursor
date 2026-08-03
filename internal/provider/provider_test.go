@@ -31,7 +31,7 @@ func TestRegistrationExposesNativeOAuthAndQuotaResource(t *testing.T) {
 }
 
 func TestParseAuthRecognizesOnlyMatchingProvider(t *testing.T) {
-	storage, _ := json.Marshal(storedAuth{Type: "subscription-bridge", Upstream: KindCursor, Handle: "abc123"})
+	storage, _ := json.Marshal(storedAuth{Type: "copilot-cursor", Upstream: KindCursor, Handle: "abc123"})
 	request, _ := json.Marshal(pluginapi.AuthParseRequest{RawJSON: storage})
 
 	raw, err := Handle(KindCursor, pluginabi.MethodAuthParse, request)
@@ -58,14 +58,14 @@ func TestParseAuthRecognizesOnlyMatchingProvider(t *testing.T) {
 }
 
 func TestBridgeEnvironmentDefaults(t *testing.T) {
-	oldEndpoint := os.Getenv("CPA_SUBSCRIPTION_BRIDGE_ENDPOINT")
-	oldTimeout := os.Getenv("CPA_SUBSCRIPTION_BRIDGE_TIMEOUT")
+	oldEndpoint := os.Getenv("CPA_COPILOT_CURSOR_ENDPOINT")
+	oldTimeout := os.Getenv("CPA_COPILOT_CURSOR_TIMEOUT")
 	t.Cleanup(func() {
-		_ = os.Setenv("CPA_SUBSCRIPTION_BRIDGE_ENDPOINT", oldEndpoint)
-		_ = os.Setenv("CPA_SUBSCRIPTION_BRIDGE_TIMEOUT", oldTimeout)
+		_ = os.Setenv("CPA_COPILOT_CURSOR_ENDPOINT", oldEndpoint)
+		_ = os.Setenv("CPA_COPILOT_CURSOR_TIMEOUT", oldTimeout)
 	})
-	_ = os.Unsetenv("CPA_SUBSCRIPTION_BRIDGE_ENDPOINT")
-	_ = os.Setenv("CPA_SUBSCRIPTION_BRIDGE_TIMEOUT", "invalid")
+	_ = os.Unsetenv("CPA_COPILOT_CURSOR_ENDPOINT")
+	_ = os.Setenv("CPA_COPILOT_CURSOR_TIMEOUT", "invalid")
 	if bridgeEndpoint() != defaultBridgeEndpoint {
 		t.Fatalf("endpoint = %q", bridgeEndpoint())
 	}

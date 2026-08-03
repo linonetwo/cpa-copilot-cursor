@@ -1,4 +1,4 @@
-module github.com/linonetwo/cpa-subscription-bridge
+module github.com/linonetwo/cpa-copilot-cursor
 
 go 1.26.0
 

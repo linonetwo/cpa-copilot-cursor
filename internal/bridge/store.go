@@ -78,7 +78,7 @@ func (s *CredentialStore) SaveRecord(provider, handle, label, login string) (Aut
 		label = strings.ToUpper(provider[:1]) + provider[1:] + " subscription"
 	}
 	record := AuthRecord{
-		Type:      "subscription-bridge",
+		Type:      "copilot-cursor",
 		Upstream:  provider,
 		Handle:    handle,
 		Label:     label,

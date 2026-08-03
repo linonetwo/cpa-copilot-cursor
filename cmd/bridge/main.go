@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/linonetwo/cpa-subscription-bridge/internal/bridge"
+	"github.com/linonetwo/cpa-copilot-cursor/internal/bridge"
 )
 
 func main() {
@@ -18,11 +18,11 @@ func main() {
 		return
 	}
 	server, err := bridge.NewServer(bridge.Options{
-		DataDir:       envOrDefault("CPA_SUBSCRIPTION_BRIDGE_DATA", "/data"),
+		DataDir:       envOrDefault("CPA_COPILOT_CURSOR_DATA", "/data"),
 		CopilotBinary: envOrDefault("COPILOT_CLI_PATH", "/opt/copilot/copilot"),
 		CursorBinary:  envOrDefault("CURSOR_AGENT_PATH", "/opt/cursor-agent/node"),
 		CursorScript:  envOrDefault("CURSOR_AGENT_SCRIPT", "/opt/cursor-agent/index.js"),
-		Secret:        os.Getenv("CPA_SUBSCRIPTION_BRIDGE_SECRET"),
+		Secret:        os.Getenv("CPA_COPILOT_CURSOR_SECRET"),
 	})
 	if err != nil {
 		log.Fatal(err)

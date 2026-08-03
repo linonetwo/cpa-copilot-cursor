@@ -54,10 +54,10 @@ func registrationFor(kind Kind) registration {
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
 			Name:             providerName(kind),
-			Version:          "0.2.0-rc.2",
+			Version:          "0.2.0-rc.3",
 			Author:           "linonetwo",
-			GitHubRepository: "https://github.com/linonetwo/cpa-subscription-bridge",
-			Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-subscription-bridge/main/assets/logo.svg",
+			GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
+			Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-copilot-cursor/main/assets/logo.svg",
 		},
 		Capabilities: registrationCapability{
 			ModelProvider:         true,
@@ -77,7 +77,7 @@ func parseAuth(kind Kind, request []byte) ([]byte, error) {
 		return nil, err
 	}
 	var auth storedAuth
-	if err := json.Unmarshal(parseRequest.RawJSON, &auth); err != nil || auth.Type != "subscription-bridge" || auth.Upstream != kind || auth.Handle == "" {
+	if err := json.Unmarshal(parseRequest.RawJSON, &auth); err != nil || auth.Type != "copilot-cursor" || auth.Upstream != kind || auth.Handle == "" {
 		return okEnvelope(pluginapi.AuthParseResponse{Handled: false})
 	}
 	return okEnvelope(pluginapi.AuthParseResponse{Handled: true, Auth: authData(kind, auth)})
@@ -221,7 +221,7 @@ func authData(kind Kind, auth storedAuth) pluginapi.AuthData {
 		Label:       label,
 		StorageJSON: storage,
 		Metadata: map[string]any{
-			"type":       "subscription-bridge",
+			"type":       "copilot-cursor",
 			"upstream":   string(kind),
 			"login":      auth.Login,
 			"created_at": auth.CreatedAt,
@@ -235,7 +235,7 @@ func decodeStoredAuth(kind Kind, storage []byte) (storedAuth, error) {
 	if err := json.Unmarshal(storage, &auth); err != nil {
 		return auth, err
 	}
-	if auth.Type != "subscription-bridge" || auth.Upstream != kind || auth.Handle == "" {
+	if auth.Type != "copilot-cursor" || auth.Upstream != kind || auth.Handle == "" {
 		return auth, fmt.Errorf("invalid %s subscription auth", providerID(kind))
 	}
 	return auth, nil

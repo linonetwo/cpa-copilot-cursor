@@ -73,8 +73,8 @@ The Go bridge must preserve:
 - `POST /v1/models`;
 - `POST /v1/execute`;
 - `POST /v1/quota`;
-- `CPA_SUBSCRIPTION_BRIDGE_SECRET`;
-- `CPA_SUBSCRIPTION_BRIDGE_DATA`;
+- `CPA_COPILOT_CURSOR_SECRET`;
+- `CPA_COPILOT_CURSOR_DATA`;
 - opaque CPA auth handles and the existing PVC layout;
 - Copilot and Cursor login output parsing through a pseudo-terminal;
 - OpenAI chat-completions response and streaming shapes.

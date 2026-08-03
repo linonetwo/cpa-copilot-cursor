@@ -257,7 +257,7 @@ func (r *Runtimes) copilotExecute(ctx context.Context, handle, model, prompt str
 	defer client.Stop()
 	skipInstructions := true
 	config := &copilot.SessionConfig{
-		ClientName:             "cpa-subscription-bridge",
+		ClientName:             "cpa-copilot-cursor",
 		Model:                  model,
 		Tools:                  []copilot.Tool{},
 		AvailableTools:         []string{},

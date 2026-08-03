@@ -60,7 +60,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/linonetwo/cpa-subscription-bridge/internal/provider"
+	"github.com/linonetwo/cpa-copilot-cursor/internal/provider"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginabi"
 )
 

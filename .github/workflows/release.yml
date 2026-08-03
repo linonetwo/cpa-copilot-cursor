@@ -23,7 +23,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/cpa-subscription-bridge
+          images: ghcr.io/${{ github.repository_owner }}/cpa-copilot-cursor
           flavor: latest=false
           tags: |
             type=ref,event=tag
@@ -39,8 +39,8 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Build release plugins
         run: |
-          docker build --target plugin-builder -t cpa-subscription-plugin-builder .
-          id=$(docker create cpa-subscription-plugin-builder)
+          docker build --target plugin-builder -t cpa-copilot-cursor-plugin-builder .
+          id=$(docker create cpa-copilot-cursor-plugin-builder)
           mkdir -p dist
           docker cp "$id:/out/." dist
           docker rm "$id"
