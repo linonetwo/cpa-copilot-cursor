@@ -66,6 +66,8 @@ COPY --from=plugin-builder /out/cpa-copilot-cursor /usr/local/bin/cpa-copilot-cu
 
 ENV CPA_COPILOT_CURSOR_DATA=/data \
     COPILOT_CLI_PATH=/opt/copilot/copilot \
+    COPILOT_CACHE_HOME=/data/runtime-cache/copilot \
+    COPILOT_AUTO_UPDATE=false \
     CURSOR_AGENT_PATH=/opt/cursor-agent/node \
     CURSOR_AGENT_SCRIPT=/opt/cursor-agent/index.js \
     HOME=/data/runtime-home

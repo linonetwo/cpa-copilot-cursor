@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/linonetwo/cpa-copilot-cursor/internal/bridge"
@@ -25,6 +27,15 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) == 3 && os.Args[1] == "--prepare-copilot-cache" {
+		if err := prepareCopilotCache(
+			envOrDefault("COPILOT_CLI_PATH", "/opt/copilot/copilot"),
+			os.Args[2],
+		); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	server, err := bridge.NewServer(bridge.Options{
 		DataDir:       envOrDefault("CPA_COPILOT_CURSOR_DATA", "/data"),
 		CopilotBinary: envOrDefault("COPILOT_CLI_PATH", "/opt/copilot/copilot"),
@@ -38,6 +49,46 @@ func main() {
 	if err := server.ListenAndServe("127.0.0.1:8789"); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func prepareCopilotCache(binary, cacheDir string) error {
+	if strings.TrimSpace(cacheDir) == "" {
+		return fmt.Errorf("Copilot cache directory is required")
+	}
+	if err := os.MkdirAll(cacheDir, 0o700); err != nil {
+		return fmt.Errorf("create Copilot cache directory: %w", err)
+	}
+	bootstrapHome := filepath.Join(cacheDir, "bootstrap-home")
+	if err := os.MkdirAll(bootstrapHome, 0o700); err != nil {
+		return fmt.Errorf("create Copilot bootstrap home: %w", err)
+	}
+	command := exec.Command(binary, "version")
+	command.Env = commandEnvironment(os.Environ(), map[string]string{
+		"COPILOT_AUTO_UPDATE": "false",
+		"COPILOT_CACHE_HOME":  cacheDir,
+		"COPILOT_HOME":        filepath.Join(bootstrapHome, ".copilot"),
+		"HOME":                bootstrapHome,
+	})
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("prepare Copilot runtime cache: %s: %w", strings.TrimSpace(string(output)), err)
+	}
+	return nil
+}
+
+func commandEnvironment(environment []string, values map[string]string) []string {
+	result := append([]string{}, environment...)
+	for name, value := range values {
+		prefix := name + "="
+		filtered := result[:0]
+		for _, entry := range result {
+			if !strings.HasPrefix(entry, prefix) {
+				filtered = append(filtered, entry)
+			}
+		}
+		result = append(filtered, prefix+value)
+	}
+	return result
 }
 
 func installPlugins(sourceDir, destinationDir string) error {

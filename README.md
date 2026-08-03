@@ -21,6 +21,8 @@ GitHub 官方 Device Flow 要求客户端同时展示 `verification_uri` 和 `us
 
 Copilot CLI 在无系统 keychain 的无头 Linux 中会询问是否改存 `~/.copilot/config.json`。桥接服务仅在用户主动发起 Copilot 登录后自动确认该提示；凭证保存在账号隔离、权限为 `0700` 的持久卷目录中，不会进入 CPA auth JSON。
 
+部署时应先运行 `cpa-copilot-cursor --prepare-copilot-cache /data/runtime-cache/copilot`。所有 Copilot 账号共用这一份无凭证 runtime cache，各账号的 `COPILOT_HOME` 仍保持隔离，避免每次登录重复展开约 183MB runtime 并触发 WebUI 超时。
+
 ## 架构
 
 ```mermaid
