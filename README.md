@@ -60,6 +60,9 @@ Harbor Proxy Cache 可按标准 `ghcr.io` 上游缓存该镜像，无需为 CPA 
 /opt/cursor-agent/index.js
 ```
 
+Distroless 镜像不包含 Shell。init container 应执行
+`/usr/local/bin/cpa-copilot-cursor --install-plugins <目标目录>` 安装两份 CPA 插件。
+
 ## CPA 配置
 
 ```yaml

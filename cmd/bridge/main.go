@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/linonetwo/cpa-copilot-cursor/internal/bridge"
@@ -13,6 +15,12 @@ import (
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "--healthcheck" {
 		if err := healthcheck(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if len(os.Args) == 3 && os.Args[1] == "--install-plugins" {
+		if err := installPlugins("/plugins", os.Args[2]); err != nil {
 			log.Fatal(err)
 		}
 		return
@@ -30,6 +38,50 @@ func main() {
 	if err := server.ListenAndServe("127.0.0.1:8789"); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func installPlugins(sourceDir, destinationDir string) error {
+	if err := os.MkdirAll(destinationDir, 0o700); err != nil {
+		return fmt.Errorf("create plugin directory: %w", err)
+	}
+	for _, name := range []string{"cpa-copilot-provider.so", "cpa-cursor-provider.so"} {
+		if err := copyPlugin(filepath.Join(sourceDir, name), filepath.Join(destinationDir, name)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copyPlugin(source, destination string) error {
+	input, err := os.Open(source)
+	if err != nil {
+		return fmt.Errorf("open plugin %s: %w", filepath.Base(source), err)
+	}
+	defer input.Close()
+
+	temporary := destination + ".tmp"
+	output, err := os.OpenFile(temporary, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
+	if err != nil {
+		return fmt.Errorf("create plugin %s: %w", filepath.Base(destination), err)
+	}
+	if _, err := io.Copy(output, input); err != nil {
+		output.Close()
+		os.Remove(temporary)
+		return fmt.Errorf("copy plugin %s: %w", filepath.Base(destination), err)
+	}
+	if err := output.Close(); err != nil {
+		os.Remove(temporary)
+		return fmt.Errorf("close plugin %s: %w", filepath.Base(destination), err)
+	}
+	if err := os.Chmod(temporary, 0o755); err != nil {
+		os.Remove(temporary)
+		return fmt.Errorf("set plugin mode %s: %w", filepath.Base(destination), err)
+	}
+	if err := os.Rename(temporary, destination); err != nil {
+		os.Remove(temporary)
+		return fmt.Errorf("replace plugin %s: %w", filepath.Base(destination), err)
+	}
+	return nil
 }
 
 func healthcheck() error {
