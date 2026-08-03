@@ -11,11 +11,13 @@
 ## 用户体验
 
 1. 在 CPAMP 的「OAuth 登录」页面直接点击 Copilot 或 Cursor 登录。
-2. 在浏览器完成官方设备登录；不需要进入插件页面，也不需要手工复制令牌。
+2. Copilot 按 GitHub 官方 Device Flow 显示一次性设备码；复制设备码并在 GitHub 验证页完成登录。Cursor 直接打开官方登录页。
 3. 登录成功后，CPA 只保存一个不透明账号句柄；实际 OAuth 状态保存在桥接服务的独立持久卷。
 4. 在 CPAMP 插件菜单中打开对应的 Quota 页面查看账号状态和额度摘要。
 
 Copilot 额度来自官方 SDK 的 `account.getQuota`。Cursor 目前没有公开、稳定的官方订阅额度 SDK；本项目只展示官方 `cursor-agent status` 的结果，不调用逆向工程接口。
+
+GitHub 官方 Device Flow 要求客户端同时展示 `verification_uri` 和 `user_code`。为兼容只向 WebUI 返回 `url/state` 的 CPA 版本，桥接服务会把设备码同时放入 URL 的 `user_code` 查询参数和插件 metadata；支持设备码 UI 的 CPAMP 可将它独立展示并提供复制按钮。设备码默认 15 分钟过期，不会写入日志或认证文件。
 
 ## 架构
 
@@ -95,4 +97,3 @@ Docker 构建固定校验 Cursor Agent 下载包的 SHA-256，并固定 `github-
 ## License
 
 MIT
-

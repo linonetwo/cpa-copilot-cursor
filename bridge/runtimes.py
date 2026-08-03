@@ -14,6 +14,7 @@ from copilot import CopilotClient
 from copilot._cli_download import get_or_download_cli
 from copilot.generated.rpc import AccountGetQuotaRequest
 
+from device_flow import authorization_url, login_metadata
 from openai_payload import completion_payload, prompt_from_payload, stream_chunks
 from store import AuthRecord, CredentialStore
 
@@ -71,13 +72,15 @@ class SubscriptionRuntimes:
 
         for _ in range(300):
             if flow.url:
-                url = flow.url
-                if provider == "copilot" and flow.user_code:
-                    url = f"{url}?user_code={flow.user_code}"
-                return url, state, {
-                    "instructions": self._recent_output(flow),
-                    "user_code": flow.user_code,
-                }
+                return (
+                    authorization_url(provider, flow.url, flow.user_code),
+                    state,
+                    login_metadata(
+                        flow.url,
+                        flow.user_code,
+                        self._recent_output(flow),
+                    ),
+                )
             if process.returncode is not None:
                 break
             await asyncio.sleep(0.1)

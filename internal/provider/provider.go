@@ -54,7 +54,7 @@ func registrationFor(kind Kind) registration {
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
 			Name:             providerName(kind),
-			Version:          "0.1.1",
+			Version:          "0.1.2",
 			Author:           "linonetwo",
 			GitHubRepository: "https://github.com/linonetwo/cpa-subscription-bridge",
 			Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-subscription-bridge/main/assets/logo.svg",
