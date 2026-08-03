@@ -50,7 +50,8 @@ Harbor Proxy Cache 可按标准 `ghcr.io` 上游缓存该镜像，无需为 CPA 
 ```text
 /plugins/cpa-copilot-provider.so
 /plugins/cpa-cursor-provider.so
-/app/app.py
+/usr/local/bin/cpa-subscription-bridge
+/opt/copilot/copilot
 /opt/cursor-agent/cursor-agent
 ```
 
@@ -78,11 +79,10 @@ Pod 中需要：
 
 ```bash
 go test ./...
-PYTHONPATH=bridge python -m unittest discover -s bridge/tests -v
 docker build -t cpa-subscription-bridge:dev .
 ```
 
-Docker 构建固定校验 Cursor Agent 下载包的 SHA-256，并固定 `github-copilot-sdk==1.0.8`。
+Docker 构建固定校验官方 Copilot CLI 下载包的 SHA-512 和 Cursor Agent 下载包的 SHA-256；Go bridge 固定使用 `github.com/github/copilot-sdk/go v1.0.8`。
 
 ## 安全原则
 

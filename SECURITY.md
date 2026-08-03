@@ -12,7 +12,7 @@ CPA resource routes are not management-key authenticated by CPA itself. The quot
 
 ## Upstream software
 
-- GitHub Copilot requests use the official `github-copilot-sdk` and its pinned, checksum-verified runtime download.
+- GitHub Copilot requests use the official Go SDK and a pinned, checksum-verified official Copilot CLI package.
 - Cursor requests use the official Cursor Agent CLI archive with a pinned SHA-256.
 - The project does not implement account farming, hardware identity reset, anti-ban logic, or subscription-limit bypasses.
 

@@ -1,0 +1,84 @@
+package bridge
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestCredentialStoreRoundTrip(t *testing.T) {
+	store, err := NewCredentialStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	handle, err := store.NewHandle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, err := store.SaveRecord("copilot", handle, "Primary", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := store.LoadRecord("copilot", handle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded != record {
+		t.Fatalf("loaded record = %+v, want %+v", loaded, record)
+	}
+	accountDir, _ := store.AccountDir("copilot", handle)
+	content, _ := os.ReadFile(filepath.Join(accountDir, "auth.json"))
+	if strings.Contains(strings.ToLower(string(content)), "token") {
+		t.Fatal("auth record contains token data")
+	}
+}
+
+func TestCredentialStoreRejectsTraversal(t *testing.T) {
+	store, _ := NewCredentialStore(t.TempDir())
+	if _, err := store.AccountDir("cursor", "../escape"); err == nil {
+		t.Fatal("expected invalid handle error")
+	}
+}
+
+func TestDeviceFlowURLAndMetadata(t *testing.T) {
+	target := authorizationURL("copilot", "https://github.com/login/device", "ABCD-EFGH")
+	if target != "https://github.com/login/device?user_code=ABCD-EFGH" {
+		t.Fatalf("authorization URL = %q", target)
+	}
+	metadata := loginMetadata("https://github.com/login/device", "ABCD-EFGH", "Enter the code")
+	if metadata["user_code"] != "ABCD-EFGH" {
+		t.Fatalf("metadata = %#v", metadata)
+	}
+}
+
+func TestPromptAndOpenAIShapes(t *testing.T) {
+	prompt, err := promptFromPayload(map[string]any{
+		"messages": []any{
+			map[string]any{"role": "system", "content": "Be concise."},
+			map[string]any{"role": "user", "content": []any{
+				map[string]any{"type": "text", "text": "Hello"},
+				map[string]any{"type": "text", "text": "World"},
+			}},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(prompt, "SYSTEM:\nBe concise.") || !strings.HasSuffix(prompt, "ASSISTANT:") {
+		t.Fatalf("prompt = %q", prompt)
+	}
+	payload := completionPayload("model", "answer")
+	encoded, _ := json.Marshal(payload)
+	if !strings.Contains(string(encoded), `"content":"answer"`) {
+		t.Fatalf("completion = %s", encoded)
+	}
+	chunks, err := streamChunks("model", "answer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(chunks) != 4 || chunks[3] != "data: [DONE]\n\n" {
+		t.Fatalf("chunks = %#v", chunks)
+	}
+}

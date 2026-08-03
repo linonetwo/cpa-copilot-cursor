@@ -8,8 +8,8 @@ native plugins as thin Go shared libraries.
 Use:
 
 - `github.com/github/copilot-sdk/go` pinned to the stable Copilot SDK release.
-- The SDK's bundled, integrity-verified Copilot CLI with the default child-process
-  JSON-RPC transport.
+- The pinned, integrity-verified official Copilot CLI package with the SDK's
+  default child-process JSON-RPC transport.
 - The official `cursor-agent` CLI for Cursor subscription login and execution.
 - A Go HTTP server bound to `127.0.0.1:8789`, preserving the existing bridge API.
 
@@ -49,6 +49,11 @@ The current local image measurement is approximately:
 The migration should reduce the bridge process and image overhead, but the two
 official CLI runtimes will remain the dominant image components.
 
+The local candidate measurement after migration is:
+
+- total image: 519 MB (64 MB smaller);
+- idle bridge memory: about 5 MiB (previous Python bridge: about 54 MiB).
+
 ## Compatibility Contract
 
 The Go bridge must preserve:
@@ -71,10 +76,10 @@ No CPA plugin ABI or stored authentication JSON migration should be required.
 
 1. Add `cmd/bridge` and internal Go packages for HTTP, storage, device flow,
    OpenAI payload conversion, and runtime execution.
-2. Bundle the Copilot CLI with the official Go SDK bundler and expose its path to
-   both SDK clients and `copilot login`.
+2. Bundle the official Copilot CLI package and expose its path to both SDK
+   clients and `copilot login`.
 3. Port Cursor PTY login, model discovery, status, and print execution.
-4. Add API contract tests that run against both the Python and Go bridges.
+4. Port the Python tests and add HTTP API contract coverage for the Go bridge.
 5. Build a candidate image without Python and compare image size and idle memory.
 6. Run real Copilot and Cursor OAuth, model, chat, and quota integration tests.
 7. Publish a versioned candidate only after parity is confirmed.
