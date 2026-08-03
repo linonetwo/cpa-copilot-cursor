@@ -86,6 +86,23 @@ func TestLoginFlowAcceptsPlaintextCredentialStorage(t *testing.T) {
 	}
 }
 
+func TestCopilotEnvironmentDoesNotSuppressDeviceCodeOutput(t *testing.T) {
+	t.Setenv("NO_OPEN_BROWSER", "1")
+	t.Setenv("BROWSER", "echo")
+	t.Setenv("GH_BROWSER", "echo")
+	environment := accountEnvironment("copilot", "/tmp/copilot-home")
+	for _, entry := range environment {
+		if strings.HasPrefix(entry, "NO_OPEN_BROWSER=") ||
+			strings.HasPrefix(entry, "BROWSER=") ||
+			strings.HasPrefix(entry, "GH_BROWSER=") {
+			t.Fatalf("Copilot environment contains browser suppressor: %s", entry)
+		}
+	}
+	if !slices.Contains(environment, "COPILOT_HOME=/tmp/copilot-home/.copilot") {
+		t.Fatalf("Copilot environment does not contain isolated home: %#v", environment)
+	}
+}
+
 func TestCursorNodeArguments(t *testing.T) {
 	runtimes := NewRuntimes(nil, "", "/opt/cursor-agent/node", "/opt/cursor-agent/index.js")
 	got := runtimes.cursorArguments("login")

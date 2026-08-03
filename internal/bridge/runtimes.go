@@ -372,16 +372,38 @@ func (r *Runtimes) expireLogin(state string, flow *loginFlow) {
 func accountEnvironment(provider, home string) []string {
 	environment := append([]string{}, os.Environ()...)
 	environment = setEnvironment(environment, "HOME", home)
-	environment = setEnvironment(environment, "NO_OPEN_BROWSER", "1")
-	environment = setEnvironment(environment, "BROWSER", "echo")
-	environment = setEnvironment(environment, "GH_BROWSER", "echo")
 	if provider == "copilot" {
+		environment = unsetEnvironment(environment, "NO_OPEN_BROWSER", "BROWSER", "GH_BROWSER")
 		environment = setEnvironment(environment, "COPILOT_HOME", filepath.Join(home, ".copilot"))
 	} else {
+		environment = setEnvironment(environment, "NO_OPEN_BROWSER", "1")
+		environment = setEnvironment(environment, "BROWSER", "echo")
+		environment = setEnvironment(environment, "GH_BROWSER", "echo")
 		environment = setEnvironment(environment, "CURSOR_INVOKED_AS", "cursor-agent")
 		environment = setEnvironment(environment, "NODE_COMPILE_CACHE", filepath.Join(home, ".cache", "cursor-compile-cache"))
 	}
 	return environment
+}
+
+func unsetEnvironment(environment []string, names ...string) []string {
+	prefixes := make([]string, 0, len(names))
+	for _, name := range names {
+		prefixes = append(prefixes, name+"=")
+	}
+	result := make([]string, 0, len(environment))
+	for _, entry := range environment {
+		remove := false
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(entry, prefix) {
+				remove = true
+				break
+			}
+		}
+		if !remove {
+			result = append(result, entry)
+		}
+	}
+	return result
 }
 
 func setEnvironment(environment []string, name, value string) []string {
