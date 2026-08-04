@@ -22,10 +22,16 @@ func SetHostCaller(caller HostCaller) {
 }
 
 func managementResources(kind Kind) []managementResource {
+	menu := providerName(kind) + " Quota"
+	description := "Shows subscription quota and account health without exposing OAuth credentials."
+	if kind == KindCursor {
+		menu = providerName(kind) + " Account Status"
+		description = "Shows Cursor account health and links to the official usage dashboard."
+	}
 	resources := []managementResource{{
 		Path:        "/quota",
-		Menu:        providerName(kind) + " Quota",
-		Description: "Shows subscription quota and account health without exposing OAuth credentials.",
+		Menu:        menu,
+		Description: description,
 	}}
 	if kind == KindCopilot {
 		resources = append(resources, managementResource{
@@ -119,9 +125,15 @@ func htmlResponse(status int, body []byte) pluginapi.ManagementResponse {
 func renderQuotaPage(kind Kind, accounts []quotaAccount, errorText string) []byte {
 	var output bytes.Buffer
 	output.WriteString("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
-	output.WriteString("<title>Subscription Quota</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;margin:0;background:#0b1020;color:#e5e7eb}main{max-width:1100px;margin:auto;padding:32px}h1{margin:0 0 8px}.muted{color:#9ca3af}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:24px}.card{background:#151b2e;border:1px solid #2b3553;border-radius:14px;padding:18px;box-shadow:0 10px 30px #0003}.row{display:flex;justify-content:space-between;gap:16px;margin:8px 0}.status{padding:3px 9px;border-radius:999px;background:#233153}.error{color:#fca5a5;white-space:pre-wrap}pre{white-space:pre-wrap;word-break:break-word;background:#0b1020;border-radius:10px;padding:12px;overflow:auto}a{color:#93c5fd}</style></head><body><main>")
-	output.WriteString("<h1>" + html.EscapeString(providerName(kind)) + " Quota</h1>")
-	output.WriteString("<p class=\"muted\">OAuth 登录入口位于 CPA 的“OAuth 登录”页面。此页仅展示额度与状态，不展示令牌。</p>")
+	output.WriteString("<title>Subscription Status</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;margin:0;background:#0b1020;color:#e5e7eb}main{max-width:1100px;margin:auto;padding:32px}h1{margin:0 0 8px}.muted{color:#9ca3af}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:24px}.card{background:#151b2e;border:1px solid #2b3553;border-radius:14px;padding:18px;box-shadow:0 10px 30px #0003}.row{display:flex;justify-content:space-between;gap:16px;margin:8px 0}.status{padding:3px 9px;border-radius:999px;background:#233153}.error{color:#fca5a5;white-space:pre-wrap}.quota{margin-top:18px}.quota-head{display:flex;justify-content:space-between;gap:12px}.track{height:10px;background:#27324d;border-radius:999px;overflow:hidden;margin:8px 0}.fill{height:100%;background:#60a5fa}.notice{background:#0b1020;border-radius:10px;padding:14px;margin-top:16px}a{color:#93c5fd}</style></head><body><main>")
+	title := providerName(kind) + " Quota"
+	intro := "OAuth 登录入口位于 CPA 的“OAuth 登录”页面。此页仅展示额度与状态，不展示令牌。"
+	if kind == KindCursor {
+		title = providerName(kind) + " Account Status"
+		intro = "Cursor 官方 CLI 目前只提供登录状态，不提供订阅额度。实际用量请前往 Cursor 官方 Usage 页面查看。"
+	}
+	output.WriteString("<h1>" + html.EscapeString(title) + "</h1>")
+	output.WriteString("<p class=\"muted\">" + html.EscapeString(intro) + "</p>")
 	if errorText != "" {
 		output.WriteString("<p class=\"error\">" + html.EscapeString(errorText) + "</p>")
 	}
@@ -139,8 +151,10 @@ func renderQuotaPage(kind Kind, accounts []quotaAccount, errorText string) []byt
 		}
 		if account.Error != "" {
 			output.WriteString("<p class=\"error\">" + html.EscapeString(account.Error) + "</p>")
+		} else if kind == KindCopilot {
+			renderCopilotQuota(&output, account.Quota)
 		} else {
-			output.WriteString("<pre>" + html.EscapeString(prettyJSON(account.Quota)) + "</pre>")
+			renderCursorStatus(&output, account.Quota)
 		}
 		output.WriteString("</section>")
 	}
@@ -148,10 +162,46 @@ func renderQuotaPage(kind Kind, accounts []quotaAccount, errorText string) []byt
 	return output.Bytes()
 }
 
-func prettyJSON(raw json.RawMessage) string {
-	var output bytes.Buffer
-	if json.Indent(&output, raw, "", "  ") == nil {
-		return output.String()
+func renderCopilotQuota(output *bytes.Buffer, raw json.RawMessage) {
+	var payload struct {
+		QuotaSnapshots map[string]struct {
+			EntitlementRequests int     `json:"entitlementRequests"`
+			IsUnlimited         bool    `json:"isUnlimitedEntitlement"`
+			RemainingPercentage float64 `json:"remainingPercentage"`
+			ResetDate           string  `json:"resetDate"`
+			UsedRequests        int     `json:"usedRequests"`
+		} `json:"quotaSnapshots"`
 	}
-	return string(raw)
+	if json.Unmarshal(raw, &payload) != nil || len(payload.QuotaSnapshots) == 0 {
+		output.WriteString("<p class=\"error\">暂时无法解析 Copilot 额度数据。</p>")
+		return
+	}
+	labels := map[string]string{"chat": "Chat", "completions": "Completions", "premium_interactions": "Premium requests"}
+	for _, key := range []string{"premium_interactions", "chat", "completions"} {
+		quota, ok := payload.QuotaSnapshots[key]
+		if !ok {
+			continue
+		}
+		summary := fmt.Sprintf("%d / %d", quota.UsedRequests, quota.EntitlementRequests)
+		if quota.IsUnlimited {
+			summary = "无限"
+		}
+		output.WriteString("<div class=\"quota\"><div class=\"quota-head\"><strong>" + labels[key] + "</strong><span>" + html.EscapeString(summary) + " · 剩余 " + fmt.Sprintf("%.0f%%", quota.RemainingPercentage) + "</span></div>")
+		output.WriteString("<div class=\"track\"><div class=\"fill\" style=\"width:" + fmt.Sprintf("%.2f%%", quota.RemainingPercentage) + "\"></div></div>")
+		if quota.ResetDate != "" {
+			output.WriteString("<div class=\"muted\">重置时间：" + html.EscapeString(quota.ResetDate) + "</div>")
+		}
+		output.WriteString("</div>")
+	}
+}
+
+func renderCursorStatus(output *bytes.Buffer, raw json.RawMessage) {
+	var payload struct {
+		Status string `json:"status"`
+	}
+	_ = json.Unmarshal(raw, &payload)
+	if payload.Status != "" {
+		output.WriteString("<div class=\"notice\">" + html.EscapeString(payload.Status) + "</div>")
+	}
+	output.WriteString("<p class=\"notice\">Cursor Agent CLI 不提供额度字段，因此此处不能可靠展示剩余请求数。<br><a href=\"https://cursor.com/dashboard?tab=usage\" target=\"_blank\" rel=\"noreferrer\">打开 Cursor 官方 Usage 页面</a></p>")
 }
