@@ -9,7 +9,7 @@ import (
 const defaultBridgeEndpoint = "http://127.0.0.1:8789"
 
 func bridgeEndpoint() string {
-	value := strings.TrimRight(strings.TrimSpace(os.Getenv("CPA_SUBSCRIPTION_BRIDGE_ENDPOINT")), "/")
+	value := strings.TrimRight(strings.TrimSpace(os.Getenv("CPA_COPILOT_CURSOR_ENDPOINT")), "/")
 	if value == "" {
 		return defaultBridgeEndpoint
 	}
@@ -17,11 +17,11 @@ func bridgeEndpoint() string {
 }
 
 func bridgeSecret() string {
-	return strings.TrimSpace(os.Getenv("CPA_SUBSCRIPTION_BRIDGE_SECRET"))
+	return strings.TrimSpace(os.Getenv("CPA_COPILOT_CURSOR_SECRET"))
 }
 
 func bridgeTimeout() time.Duration {
-	value := strings.TrimSpace(os.Getenv("CPA_SUBSCRIPTION_BRIDGE_TIMEOUT"))
+	value := strings.TrimSpace(os.Getenv("CPA_COPILOT_CURSOR_TIMEOUT"))
 	if value == "" {
 		return 3 * time.Minute
 	}
@@ -36,7 +36,14 @@ func providerID(kind Kind) string {
 	if kind == KindCursor {
 		return "cursor"
 	}
-	return "github-copilot"
+	return "copilot"
+}
+
+func pluginID(kind Kind) string {
+	if kind == KindCursor {
+		return "cpa-cursor-provider"
+	}
+	return "cpa-copilot-provider"
 }
 
 func providerName(kind Kind) string {
@@ -44,4 +51,11 @@ func providerName(kind Kind) string {
 		return "Cursor Subscription"
 	}
 	return "GitHub Copilot Subscription"
+}
+
+func pluginName(kind Kind) string {
+	if kind == KindCursor {
+		return "Cursor 订阅"
+	}
+	return "GitHub Copilot 订阅"
 }

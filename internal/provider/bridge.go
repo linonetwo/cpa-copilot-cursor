@@ -27,22 +27,22 @@ func callBridge(ctx context.Context, path string, requestBody any, responseBody 
 	client := &http.Client{Timeout: bridgeTimeout()}
 	response, err := client.Do(request)
 	if err != nil {
-		return fmt.Errorf("call subscription bridge: %w", err)
+		return fmt.Errorf("call Copilot/Cursor bridge: %w", err)
 	}
 	defer response.Body.Close()
 
 	responseBytes, err := io.ReadAll(io.LimitReader(response.Body, 16<<20))
 	if err != nil {
-		return fmt.Errorf("read subscription bridge response: %w", err)
+		return fmt.Errorf("read Copilot/Cursor bridge response: %w", err)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("subscription bridge returned %d: %s", response.StatusCode, string(responseBytes))
+		return fmt.Errorf("Copilot/Cursor bridge returned %d: %s", response.StatusCode, string(responseBytes))
 	}
 	if responseBody == nil {
 		return nil
 	}
 	if err := json.Unmarshal(responseBytes, responseBody); err != nil {
-		return fmt.Errorf("decode subscription bridge response: %w", err)
+		return fmt.Errorf("decode Copilot/Cursor bridge response: %w", err)
 	}
 	return nil
 }

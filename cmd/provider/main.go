@@ -60,7 +60,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/linonetwo/cpa-subscription-bridge/internal/provider"
+	"github.com/linonetwo/cpa-copilot-cursor/internal/provider"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginabi"
 )
 
@@ -138,7 +138,13 @@ func cliproxyPluginCall(method *C.char, request *C.uint8_t, requestLen C.size_t,
 	if request != nil && requestLen > 0 {
 		requestBytes = C.GoBytes(unsafe.Pointer(request), C.int(requestLen))
 	}
-	raw, err := provider.Handle(provider.Kind(providerKind), C.GoString(method), requestBytes)
+	var raw []byte
+	var err error
+	if providerKind == "copilot-catalog" {
+		raw, err = provider.HandleCatalog(C.GoString(method))
+	} else {
+		raw, err = provider.Handle(provider.Kind(providerKind), C.GoString(method), requestBytes)
+	}
 	if err != nil {
 		writeResponse(response, failure("plugin_error", err.Error()))
 		return 1

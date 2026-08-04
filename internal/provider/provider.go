@@ -17,7 +17,7 @@ func Handle(kind Kind, method string, request []byte) ([]byte, error) {
 	case pluginabi.MethodPluginRegister, pluginabi.MethodPluginReconfigure:
 		return okEnvelope(registrationFor(kind))
 	case pluginabi.MethodModelStatic:
-		return okEnvelope(pluginapi.ModelResponse{Provider: providerID(kind)})
+		return okEnvelope(pluginapi.ModelResponse{Provider: providerID(kind), Models: staticModels(kind)})
 	case pluginabi.MethodModelForAuth:
 		return modelsForAuth(kind, request)
 	case pluginabi.MethodAuthIdentifier, pluginabi.MethodExecutorIdentifier:
@@ -37,38 +37,93 @@ func Handle(kind Kind, method string, request []byte) ([]byte, error) {
 	case pluginabi.MethodExecutorCountTokens:
 		return okEnvelope(pluginapi.ExecutorResponse{Payload: []byte(`{"total_tokens":0}`)})
 	case pluginabi.MethodManagementRegister:
-		return okEnvelope(managementRegistration{Resources: []managementResource{{
-			Path:        "/quota",
-			Menu:        providerName(kind) + " Quota",
-			Description: "Shows subscription quota and account health without exposing OAuth credentials.",
-		}}})
+		return okEnvelope(managementRegistration{Resources: managementResources(kind)})
 	case pluginabi.MethodManagementHandle:
-		return handleManagement(kind)
+		return handleManagement(kind, request)
+	default:
+		return errorEnvelope("unknown_method", "unknown method: "+method), nil
+	}
+}
+
+func HandleCatalog(method string) ([]byte, error) {
+	switch method {
+	case pluginabi.MethodPluginRegister, pluginabi.MethodPluginReconfigure:
+		return okEnvelope(registration{
+			SchemaVersion: pluginabi.SchemaVersion,
+			Metadata: pluginapi.Metadata{
+				Name:             "GitHub Copilot 模型目录",
+				Version:          "0.2.0-rc.16",
+				Author:           "linonetwo",
+				GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
+			},
+			Capabilities: registrationCapability{ModelProvider: true},
+		})
+	case pluginabi.MethodModelStatic, pluginabi.MethodModelForAuth:
+		return okEnvelope(pluginapi.ModelResponse{Provider: providerID(KindCopilot), Models: staticModels(KindCopilot)})
 	default:
 		return errorEnvelope("unknown_method", "unknown method: "+method), nil
 	}
 }
 
 func registrationFor(kind Kind) registration {
+	modelScope := pluginapi.ExecutorModelScopeOAuth
+	if kind == KindCopilot {
+		modelScope = pluginapi.ExecutorModelScopeBoth
+	}
 	return registration{
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
-			Name:             providerName(kind),
-			Version:          "0.1.2",
+			Name:             pluginName(kind),
+			Version:          "0.2.0-rc.16",
 			Author:           "linonetwo",
-			GitHubRepository: "https://github.com/linonetwo/cpa-subscription-bridge",
-			Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-subscription-bridge/main/assets/logo.svg",
+			GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
 		},
 		Capabilities: registrationCapability{
 			ModelProvider:         true,
 			AuthProvider:          true,
 			Executor:              true,
-			ExecutorModelScope:    pluginapi.ExecutorModelScopeOAuth,
+			ExecutorModelScope:    modelScope,
 			ExecutorInputFormats:  []string{"chat-completions"},
 			ExecutorOutputFormats: []string{"chat-completions"},
 			ManagementAPI:         true,
 		},
 	}
+}
+
+func staticModels(kind Kind) []pluginapi.ModelInfo {
+	if kind != KindCopilot {
+		return nil
+	}
+	catalog := []struct {
+		id      string
+		display string
+		context int64
+	}{
+		{"auto", "Auto", 0},
+		{"gpt-5.5", "GPT-5.5", 1_050_000},
+		{"gpt-5.4", "GPT-5.4", 1_050_000},
+		{"gpt-5.3-codex", "GPT-5.3-Codex", 400_000},
+		{"gpt-5.4-mini", "GPT-5.4 mini", 400_000},
+		{"gpt-5-mini", "GPT-5 mini", 264_000},
+		{"gemini-3.1-pro-preview", "Gemini 3.1 Pro", 1_000_000},
+		{"gemini-3.5-flash", "Gemini 3.5 Flash", 1_000_000},
+		{"mai-code-1-flash-picker", "MAI-Code-1-Flash", 256_000},
+	}
+	models := make([]pluginapi.ModelInfo, 0, len(catalog))
+	for _, model := range catalog {
+		models = append(models, pluginapi.ModelInfo{
+			ID:                         model.id,
+			Name:                       model.id,
+			Object:                     "model",
+			OwnedBy:                    providerID(kind),
+			DisplayName:                model.display,
+			ContextLength:              model.context,
+			SupportedGenerationMethods: []string{"chat"},
+			SupportedInputModalities:   []string{"text"},
+			SupportedOutputModalities:  []string{"text"},
+		})
+	}
+	return models
 }
 
 func parseAuth(kind Kind, request []byte) ([]byte, error) {
@@ -77,7 +132,7 @@ func parseAuth(kind Kind, request []byte) ([]byte, error) {
 		return nil, err
 	}
 	var auth storedAuth
-	if err := json.Unmarshal(parseRequest.RawJSON, &auth); err != nil || auth.Type != "subscription-bridge" || auth.Upstream != kind || auth.Handle == "" {
+	if err := json.Unmarshal(parseRequest.RawJSON, &auth); err != nil || !validStoredAuth(kind, auth) {
 		return okEnvelope(pluginapi.AuthParseResponse{Handled: false})
 	}
 	return okEnvelope(pluginapi.AuthParseResponse{Handled: true, Auth: authData(kind, auth)})
@@ -94,9 +149,13 @@ func startLogin(kind Kind) ([]byte, error) {
 	if err != nil {
 		expiresAt = time.Now().Add(10 * time.Minute).UTC()
 	}
+	authorizationURL := response.URL
+	if rememberDeviceFlow(kind, response.State, response.Metadata, expiresAt) {
+		authorizationURL = deviceFlowURL(kind, response.State)
+	}
 	return okEnvelope(pluginapi.AuthLoginStartResponse{
 		Provider:  providerID(kind),
-		URL:       response.URL,
+		URL:       authorizationURL,
 		State:     response.State,
 		ExpiresAt: expiresAt,
 		Metadata:  response.Metadata,
@@ -116,8 +175,10 @@ func pollLogin(kind Kind, request []byte) ([]byte, error) {
 	}
 	switch response.Status {
 	case "success":
+		forgetDeviceFlow(kind, pollRequest.State)
 		return okEnvelope(pluginapi.AuthLoginPollResponse{Status: pluginapi.AuthLoginStatusSuccess, Message: response.Message, Auth: authData(kind, response.Auth)})
 	case "error":
+		forgetDeviceFlow(kind, pollRequest.State)
 		return okEnvelope(pluginapi.AuthLoginPollResponse{Status: pluginapi.AuthLoginStatusError, Message: response.Message})
 	default:
 		return okEnvelope(pluginapi.AuthLoginPollResponse{Status: pluginapi.AuthLoginStatusPending, Message: response.Message})
@@ -221,7 +282,7 @@ func authData(kind Kind, auth storedAuth) pluginapi.AuthData {
 		Label:       label,
 		StorageJSON: storage,
 		Metadata: map[string]any{
-			"type":       "subscription-bridge",
+			"type":       "copilot-cursor",
 			"upstream":   string(kind),
 			"login":      auth.Login,
 			"created_at": auth.CreatedAt,
@@ -235,10 +296,20 @@ func decodeStoredAuth(kind Kind, storage []byte) (storedAuth, error) {
 	if err := json.Unmarshal(storage, &auth); err != nil {
 		return auth, err
 	}
-	if auth.Type != "subscription-bridge" || auth.Upstream != kind || auth.Handle == "" {
+	if !validStoredAuth(kind, auth) {
 		return auth, fmt.Errorf("invalid %s subscription auth", providerID(kind))
 	}
 	return auth, nil
+}
+
+func validStoredAuth(kind Kind, auth storedAuth) bool {
+	validType := auth.Type == "copilot-cursor" || auth.Type == providerID(kind)
+	if kind == KindCopilot && auth.Type == "github-copilot" {
+		validType = true
+	}
+	return auth.Upstream == kind &&
+		auth.Handle != "" &&
+		validType
 }
 
 func firstNonEmpty(values ...string) string {
