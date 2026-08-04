@@ -81,6 +81,23 @@ func TestParseAuthRecognizesOnlyMatchingProvider(t *testing.T) {
 	}
 }
 
+func TestParseAuthAcceptsCPANormalizedProviderType(t *testing.T) {
+	storage, _ := json.Marshal(storedAuth{Type: providerID(KindCopilot), Upstream: KindCopilot, Handle: "abc123"})
+	request, _ := json.Marshal(pluginapi.AuthParseRequest{RawJSON: storage})
+
+	raw, err := Handle(KindCopilot, pluginabi.MethodAuthParse, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response envelope
+	_ = json.Unmarshal(raw, &response)
+	var parsed pluginapi.AuthParseResponse
+	_ = json.Unmarshal(response.Result, &parsed)
+	if !parsed.Handled || parsed.Auth.Attributes["handle"] != "abc123" {
+		t.Fatalf("unexpected parsed auth: %+v", parsed)
+	}
+}
+
 func TestBridgeEnvironmentDefaults(t *testing.T) {
 	oldEndpoint := os.Getenv("CPA_COPILOT_CURSOR_ENDPOINT")
 	oldTimeout := os.Getenv("CPA_COPILOT_CURSOR_TIMEOUT")

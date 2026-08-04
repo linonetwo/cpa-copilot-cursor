@@ -50,7 +50,7 @@ func registrationFor(kind Kind) registration {
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
 			Name:             providerName(kind),
-			Version:          "0.2.0-rc.8",
+			Version:          "0.2.0-rc.9",
 			Author:           "linonetwo",
 			GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
 			Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-copilot-cursor/main/assets/logo.svg",
@@ -73,7 +73,7 @@ func parseAuth(kind Kind, request []byte) ([]byte, error) {
 		return nil, err
 	}
 	var auth storedAuth
-	if err := json.Unmarshal(parseRequest.RawJSON, &auth); err != nil || auth.Type != "copilot-cursor" || auth.Upstream != kind || auth.Handle == "" {
+	if err := json.Unmarshal(parseRequest.RawJSON, &auth); err != nil || !validStoredAuth(kind, auth) {
 		return okEnvelope(pluginapi.AuthParseResponse{Handled: false})
 	}
 	return okEnvelope(pluginapi.AuthParseResponse{Handled: true, Auth: authData(kind, auth)})
@@ -237,10 +237,16 @@ func decodeStoredAuth(kind Kind, storage []byte) (storedAuth, error) {
 	if err := json.Unmarshal(storage, &auth); err != nil {
 		return auth, err
 	}
-	if auth.Type != "copilot-cursor" || auth.Upstream != kind || auth.Handle == "" {
+	if !validStoredAuth(kind, auth) {
 		return auth, fmt.Errorf("invalid %s subscription auth", providerID(kind))
 	}
 	return auth, nil
+}
+
+func validStoredAuth(kind Kind, auth storedAuth) bool {
+	return auth.Upstream == kind &&
+		auth.Handle != "" &&
+		(auth.Type == "copilot-cursor" || auth.Type == providerID(kind))
 }
 
 func firstNonEmpty(values ...string) string {
