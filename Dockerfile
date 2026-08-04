@@ -15,6 +15,10 @@ RUN mkdir -p /out \
       -buildmode=c-shared -trimpath \
       -ldflags="-s -w -X main.providerKind=cursor" \
       -o /out/cpa-cursor-provider.so ./cmd/provider \
+    && CGO_ENABLED=1 GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build \
+      -buildmode=c-shared -trimpath \
+      -ldflags="-s -w -X main.providerKind=copilot-catalog" \
+      -o /out/cpa-copilot-model-catalog.so ./cmd/provider \
     && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build \
       -trimpath -ldflags="-s -w" \
       -o /out/cpa-copilot-cursor ./cmd/bridge \
@@ -62,6 +66,7 @@ COPY --from=runtime-downloader /opt/copilot/ /opt/copilot/
 COPY --from=runtime-downloader /opt/cursor-agent/ /opt/cursor-agent/
 COPY --from=plugin-builder /out/cpa-copilot-provider.so /plugins/cpa-copilot-provider.so
 COPY --from=plugin-builder /out/cpa-cursor-provider.so /plugins/cpa-cursor-provider.so
+COPY --from=plugin-builder /out/cpa-copilot-model-catalog.so /plugins/cpa-copilot-model-catalog.so
 COPY --from=plugin-builder /out/cpa-copilot-cursor /usr/local/bin/cpa-copilot-cursor
 
 ENV CPA_COPILOT_CURSOR_DATA=/data \

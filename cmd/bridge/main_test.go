@@ -11,8 +11,9 @@ func TestInstallPlugins(t *testing.T) {
 	sourceDir := t.TempDir()
 	destinationDir := filepath.Join(t.TempDir(), "plugins")
 	files := map[string]string{
-		"cpa-copilot-provider.so": "copilot",
-		"cpa-cursor-provider.so":  "cursor",
+		"cpa-copilot-provider.so":      "copilot",
+		"cpa-cursor-provider.so":       "cursor",
+		"cpa-copilot-model-catalog.so": "copilot catalog",
 	}
 	for name, content := range files {
 		if err := os.WriteFile(filepath.Join(sourceDir, name), []byte(content), 0o600); err != nil {

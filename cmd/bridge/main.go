@@ -95,7 +95,7 @@ func installPlugins(sourceDir, destinationDir string) error {
 	if err := os.MkdirAll(destinationDir, 0o700); err != nil {
 		return fmt.Errorf("create plugin directory: %w", err)
 	}
-	for _, name := range []string{"cpa-copilot-provider.so", "cpa-cursor-provider.so"} {
+	for _, name := range []string{"cpa-copilot-provider.so", "cpa-cursor-provider.so", "cpa-copilot-model-catalog.so"} {
 		if err := copyPlugin(filepath.Join(sourceDir, name), filepath.Join(destinationDir, name)); err != nil {
 			return err
 		}
