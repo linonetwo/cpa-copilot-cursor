@@ -34,4 +34,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Smoke test Cursor runtime
-        run: docker run --rm --entrypoint /opt/cursor-agent/node cpa-copilot-cursor:ci --version
+        run: |
+          output="$(docker run --rm --entrypoint /opt/cursor-agent/node cpa-copilot-cursor:ci /opt/cursor-agent/index.js --list-models 2>&1 || true)"
+          printf '%s\n' "$output"
+          ! printf '%s\n' "$output" | grep -q 'cannot open shared object file'

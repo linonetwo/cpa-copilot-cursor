@@ -52,7 +52,7 @@ func HandleCatalog(method string) ([]byte, error) {
 			SchemaVersion: pluginabi.SchemaVersion,
 			Metadata: pluginapi.Metadata{
 				Name:             "GitHub Copilot 模型目录",
-				Version:          "0.2.0-rc.15",
+				Version:          "0.2.0-rc.16",
 				Author:           "linonetwo",
 				GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
 			},
@@ -74,7 +74,7 @@ func registrationFor(kind Kind) registration {
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
 			Name:             pluginName(kind),
-			Version:          "0.2.0-rc.15",
+			Version:          "0.2.0-rc.16",
 			Author:           "linonetwo",
 			GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
 		},

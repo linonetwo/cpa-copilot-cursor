@@ -48,7 +48,9 @@ jobs:
           IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           image="$(printf '%s\n' "$IMAGE_TAGS" | head -n 1)"
-          docker run --rm --entrypoint /opt/cursor-agent/node "$image" --version
+          output="$(docker run --rm --entrypoint /opt/cursor-agent/node "$image" /opt/cursor-agent/index.js --list-models 2>&1 || true)"
+          printf '%s\n' "$output"
+          ! printf '%s\n' "$output" | grep -q 'cannot open shared object file'
       - name: Build release plugins
         run: |
           docker build --target plugin-builder -t cpa-copilot-cursor-plugin-builder .

@@ -64,7 +64,7 @@ LABEL org.opencontainers.image.source="https://github.com/linonetwo/cpa-copilot-
 
 COPY --from=runtime-downloader /opt/copilot/ /opt/copilot/
 COPY --from=runtime-downloader /opt/cursor-agent/ /opt/cursor-agent/
-COPY --from=runtime-downloader /lib/x86_64-linux-gnu/libz.so.1* /lib/x86_64-linux-gnu/
+COPY --from=runtime-downloader /lib/x86_64-linux-gnu/libz.so.1 /lib/libz.so.1
 COPY --from=plugin-builder /out/cpa-copilot-provider.so /plugins/cpa-copilot-provider.so
 COPY --from=plugin-builder /out/cpa-cursor-provider.so /plugins/cpa-cursor-provider.so
 COPY --from=plugin-builder /out/cpa-copilot-model-catalog.so /plugins/cpa-copilot-model-catalog.so
@@ -76,6 +76,7 @@ ENV CPA_COPILOT_CURSOR_DATA=/data \
     COPILOT_AUTO_UPDATE=false \
     CURSOR_AGENT_PATH=/opt/cursor-agent/node \
     CURSOR_AGENT_SCRIPT=/opt/cursor-agent/index.js \
+    LD_LIBRARY_PATH=/lib:/usr/lib \
     HOME=/data/runtime-home
 
 USER 0
