@@ -52,14 +52,14 @@ func HandleCatalog(method string) ([]byte, error) {
 			SchemaVersion: pluginabi.SchemaVersion,
 			Metadata: pluginapi.Metadata{
 				Name:             "GitHub Copilot Model Catalog",
-				Version:          "0.2.0-rc.13",
+				Version:          "0.2.0-rc.14",
 				Author:           "linonetwo",
 				GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
 				Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-copilot-cursor/main/assets/logo.svg",
 			},
 			Capabilities: registrationCapability{ModelProvider: true},
 		})
-	case pluginabi.MethodModelStatic:
+	case pluginabi.MethodModelStatic, pluginabi.MethodModelForAuth:
 		return okEnvelope(pluginapi.ModelResponse{Provider: providerID(KindCopilot), Models: staticModels(KindCopilot)})
 	default:
 		return errorEnvelope("unknown_method", "unknown method: "+method), nil
@@ -75,7 +75,7 @@ func registrationFor(kind Kind) registration {
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
 			Name:             providerName(kind),
-			Version:          "0.2.0-rc.13",
+			Version:          "0.2.0-rc.14",
 			Author:           "linonetwo",
 			GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
 			Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-copilot-cursor/main/assets/logo.svg",
