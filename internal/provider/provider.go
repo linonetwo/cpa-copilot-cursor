@@ -17,7 +17,7 @@ func Handle(kind Kind, method string, request []byte) ([]byte, error) {
 	case pluginabi.MethodPluginRegister, pluginabi.MethodPluginReconfigure:
 		return okEnvelope(registrationFor(kind))
 	case pluginabi.MethodModelStatic:
-		return okEnvelope(pluginapi.ModelResponse{Provider: providerID(kind)})
+		return okEnvelope(pluginapi.ModelResponse{Provider: providerID(kind), Models: staticModels(kind)})
 	case pluginabi.MethodModelForAuth:
 		return modelsForAuth(kind, request)
 	case pluginabi.MethodAuthIdentifier, pluginabi.MethodExecutorIdentifier:
@@ -46,11 +46,15 @@ func Handle(kind Kind, method string, request []byte) ([]byte, error) {
 }
 
 func registrationFor(kind Kind) registration {
+	modelScope := pluginapi.ExecutorModelScopeOAuth
+	if kind == KindCopilot {
+		modelScope = pluginapi.ExecutorModelScopeBoth
+	}
 	return registration{
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
 			Name:             providerName(kind),
-			Version:          "0.2.0-rc.10",
+			Version:          "0.2.0-rc.11",
 			Author:           "linonetwo",
 			GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
 			Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-copilot-cursor/main/assets/logo.svg",
@@ -59,12 +63,48 @@ func registrationFor(kind Kind) registration {
 			ModelProvider:         true,
 			AuthProvider:          true,
 			Executor:              true,
-			ExecutorModelScope:    pluginapi.ExecutorModelScopeOAuth,
+			ExecutorModelScope:    modelScope,
 			ExecutorInputFormats:  []string{"chat-completions"},
 			ExecutorOutputFormats: []string{"chat-completions"},
 			ManagementAPI:         true,
 		},
 	}
+}
+
+func staticModels(kind Kind) []pluginapi.ModelInfo {
+	if kind != KindCopilot {
+		return nil
+	}
+	catalog := []struct {
+		id      string
+		display string
+		context int64
+	}{
+		{"auto", "Auto", 0},
+		{"gpt-5.5", "GPT-5.5", 1_050_000},
+		{"gpt-5.4", "GPT-5.4", 1_050_000},
+		{"gpt-5.3-codex", "GPT-5.3-Codex", 400_000},
+		{"gpt-5.4-mini", "GPT-5.4 mini", 400_000},
+		{"gpt-5-mini", "GPT-5 mini", 264_000},
+		{"gemini-3.1-pro-preview", "Gemini 3.1 Pro", 1_000_000},
+		{"gemini-3.5-flash", "Gemini 3.5 Flash", 1_000_000},
+		{"mai-code-1-flash-picker", "MAI-Code-1-Flash", 256_000},
+	}
+	models := make([]pluginapi.ModelInfo, 0, len(catalog))
+	for _, model := range catalog {
+		models = append(models, pluginapi.ModelInfo{
+			ID:                         model.id,
+			Name:                       model.id,
+			Object:                     "model",
+			OwnedBy:                    providerID(kind),
+			DisplayName:                model.display,
+			ContextLength:              model.context,
+			SupportedGenerationMethods: []string{"chat"},
+			SupportedInputModalities:   []string{"text"},
+			SupportedOutputModalities:  []string{"text"},
+		})
+	}
+	return models
 }
 
 func parseAuth(kind Kind, request []byte) ([]byte, error) {

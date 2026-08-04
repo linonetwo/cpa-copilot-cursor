@@ -55,6 +55,20 @@ func TestRegistrationExposesNativeOAuthAndQuotaResource(t *testing.T) {
 	}
 }
 
+func TestCopilotRegistrationExposesStaticFallbackModels(t *testing.T) {
+	raw, err := Handle(KindCopilot, pluginabi.MethodModelStatic, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response envelope
+	_ = json.Unmarshal(raw, &response)
+	var models pluginapi.ModelResponse
+	_ = json.Unmarshal(response.Result, &models)
+	if len(models.Models) == 0 || models.Models[0].OwnedBy != "github-copilot" {
+		t.Fatalf("Copilot static models = %+v", models)
+	}
+}
+
 func TestQuotaPagesRenderProviderSpecificInformation(t *testing.T) {
 	copilot := renderQuotaPage(KindCopilot, []quotaAccount{{
 		Quota: json.RawMessage(`{"quotaSnapshots":{"premium_interactions":{"entitlementRequests":1500,"remainingPercentage":96,"resetDate":"2026-08-08T00:00:00Z","usedRequests":60}}}`),
