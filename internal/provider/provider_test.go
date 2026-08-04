@@ -30,7 +30,7 @@ func TestRegistrationExposesNativeOAuthAndQuotaResource(t *testing.T) {
 	if !registration.Capabilities.AuthProvider || !registration.Capabilities.ManagementAPI {
 		t.Fatalf("unexpected capabilities: %+v", registration.Capabilities)
 	}
-	if registration.Capabilities.ExecutorModelScope != pluginapi.ExecutorModelScopeOAuth {
+	if registration.Capabilities.ExecutorModelScope != pluginapi.ExecutorModelScopeBoth {
 		t.Fatalf("executor scope = %q", registration.Capabilities.ExecutorModelScope)
 	}
 
@@ -86,16 +86,25 @@ func TestCatalogExposesModelsForOAuthAuth(t *testing.T) {
 func TestQuotaPagesRenderProviderSpecificInformation(t *testing.T) {
 	copilot := renderQuotaPage(KindCopilot, []quotaAccount{{
 		Quota: json.RawMessage(`{"quotaSnapshots":{"premium_interactions":{"entitlementRequests":1500,"remainingPercentage":96,"resetDate":"2026-08-08T00:00:00Z","usedRequests":60}}}`),
-	}}, "")
+	}}, "", true)
 	if !bytes.Contains(copilot, []byte("Premium requests")) || !bytes.Contains(copilot, []byte("60 / 1500")) {
 		t.Fatalf("Copilot quota page = %s", copilot)
 	}
 
 	cursor := renderQuotaPage(KindCursor, []quotaAccount{{
 		Quota: json.RawMessage(`{"status":"✓ Logged in as user@example.com"}`),
-	}}, "")
+	}}, "", true)
 	if !bytes.Contains(cursor, []byte("Cursor Agent CLI")) || !bytes.Contains(cursor, []byte("cursor.com/dashboard?tab=usage")) {
 		t.Fatalf("Cursor status page = %s", cursor)
+	}
+}
+
+func TestQuotaPageUsesEnglishWhenRequested(t *testing.T) {
+	page := renderQuotaPage(KindCursor, nil, "", false)
+	if !bytes.Contains(page, []byte("Cursor Subscription Status")) ||
+		!bytes.Contains(page, []byte("No signed-in accounts found.")) ||
+		bytes.Contains(page, []byte("尚未找到")) {
+		t.Fatalf("Cursor English page = %s", page)
 	}
 }
 

@@ -52,3 +52,10 @@ func providerName(kind Kind) string {
 	}
 	return "GitHub Copilot Subscription"
 }
+
+func pluginName(kind Kind) string {
+	if kind == KindCursor {
+		return "Cursor 订阅"
+	}
+	return "GitHub Copilot 订阅"
+}

@@ -294,7 +294,10 @@ func (r *Runtimes) cursorModels(ctx context.Context, handle string) ([]map[strin
 	models := make([]map[string]any, 0)
 	for _, line := range strings.Split(output, "\n") {
 		value := strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), "-* "))
-		if value == "" || strings.Contains(strings.ToLower(value), "model") && !strings.Contains(value, ":") {
+		lowerValue := strings.ToLower(value)
+		if value == "" ||
+			strings.HasPrefix(lowerValue, "tip:") ||
+			strings.Contains(lowerValue, "model") && !strings.Contains(value, ":") {
 			continue
 		}
 		modelID := strings.Fields(value)[0]

@@ -34,7 +34,7 @@ ARG CURSOR_SHA256=702ad595213bee5df0268be9f80a19f29fcceaa2a42fc55e39f2b5199051f0
 ARG CURSOR_URL=https://downloads.cursor.com/lab/${CURSOR_VERSION}/linux/x64/agent-cli-package.tar.gz
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && apt-get install -y --no-install-recommends ca-certificates curl zlib1g \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/copilot \
@@ -64,6 +64,7 @@ LABEL org.opencontainers.image.source="https://github.com/linonetwo/cpa-copilot-
 
 COPY --from=runtime-downloader /opt/copilot/ /opt/copilot/
 COPY --from=runtime-downloader /opt/cursor-agent/ /opt/cursor-agent/
+COPY --from=runtime-downloader /lib/x86_64-linux-gnu/libz.so.1* /lib/x86_64-linux-gnu/
 COPY --from=plugin-builder /out/cpa-copilot-provider.so /plugins/cpa-copilot-provider.so
 COPY --from=plugin-builder /out/cpa-cursor-provider.so /plugins/cpa-cursor-provider.so
 COPY --from=plugin-builder /out/cpa-copilot-model-catalog.so /plugins/cpa-copilot-model-catalog.so

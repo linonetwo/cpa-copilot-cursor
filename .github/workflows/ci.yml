@@ -29,6 +29,9 @@ jobs:
           context: .
           platforms: linux/amd64
           push: false
+          load: true
           tags: cpa-copilot-cursor:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Smoke test Cursor runtime
+        run: docker run --rm --entrypoint /opt/cursor-agent/node cpa-copilot-cursor:ci --version
