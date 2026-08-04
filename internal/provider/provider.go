@@ -54,7 +54,7 @@ func registrationFor(kind Kind) registration {
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
 			Name:             providerName(kind),
-			Version:          "0.2.0-rc.11",
+			Version:          "0.2.0-rc.12",
 			Author:           "linonetwo",
 			GitHubRepository: "https://github.com/linonetwo/cpa-copilot-cursor",
 			Logo:             "https://raw.githubusercontent.com/linonetwo/cpa-copilot-cursor/main/assets/logo.svg",
@@ -284,9 +284,13 @@ func decodeStoredAuth(kind Kind, storage []byte) (storedAuth, error) {
 }
 
 func validStoredAuth(kind Kind, auth storedAuth) bool {
+	validType := auth.Type == "copilot-cursor" || auth.Type == providerID(kind)
+	if kind == KindCopilot && auth.Type == "github-copilot" {
+		validType = true
+	}
 	return auth.Upstream == kind &&
 		auth.Handle != "" &&
-		(auth.Type == "copilot-cursor" || auth.Type == providerID(kind))
+		validType
 }
 
 func firstNonEmpty(values ...string) string {

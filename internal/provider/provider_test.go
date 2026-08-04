@@ -64,7 +64,7 @@ func TestCopilotRegistrationExposesStaticFallbackModels(t *testing.T) {
 	_ = json.Unmarshal(raw, &response)
 	var models pluginapi.ModelResponse
 	_ = json.Unmarshal(response.Result, &models)
-	if len(models.Models) == 0 || models.Models[0].OwnedBy != "github-copilot" {
+	if len(models.Models) == 0 || models.Models[0].OwnedBy != "copilot" {
 		t.Fatalf("Copilot static models = %+v", models)
 	}
 }
@@ -125,6 +125,23 @@ func TestParseAuthAcceptsCPANormalizedProviderType(t *testing.T) {
 	var parsed pluginapi.AuthParseResponse
 	_ = json.Unmarshal(response.Result, &parsed)
 	if !parsed.Handled || parsed.Auth.Attributes["handle"] != "abc123" {
+		t.Fatalf("unexpected parsed auth: %+v", parsed)
+	}
+}
+
+func TestParseAuthAcceptsLegacyGitHubCopilotType(t *testing.T) {
+	storage, _ := json.Marshal(storedAuth{Type: "github-copilot", Upstream: KindCopilot, Handle: "abc123"})
+	request, _ := json.Marshal(pluginapi.AuthParseRequest{RawJSON: storage})
+
+	raw, err := Handle(KindCopilot, pluginabi.MethodAuthParse, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response envelope
+	_ = json.Unmarshal(raw, &response)
+	var parsed pluginapi.AuthParseResponse
+	_ = json.Unmarshal(response.Result, &parsed)
+	if !parsed.Handled || parsed.Auth.Provider != "copilot" {
 		t.Fatalf("unexpected parsed auth: %+v", parsed)
 	}
 }

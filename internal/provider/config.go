@@ -36,7 +36,7 @@ func providerID(kind Kind) string {
 	if kind == KindCursor {
 		return "cursor"
 	}
-	return "github-copilot"
+	return "copilot"
 }
 
 func pluginID(kind Kind) string {
